@@ -8,7 +8,7 @@ paths:
   /mbus/api:
     get:
       description: Returns this API specification
-      operationId: api
+      operationId: mbus_api
       responses:
         200:
           content:
