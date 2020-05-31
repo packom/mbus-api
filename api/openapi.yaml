@@ -10,13 +10,13 @@ paths:
       description: Returns this API specification
       operationId: mbus_api
       responses:
-        200:
+        "200":
           content:
             text/x-yaml:
               schema:
                 $ref: '#/components/schemas/yaml'
           description: OK
-        404:
+        "404":
           content:
             text/plain:
               example: File not found
@@ -28,13 +28,13 @@ paths:
       description: Gets Raspberry Pi Hat information
       operationId: hat
       responses:
-        200:
+        "200":
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/hat'
           description: OK
-        404:
+        "404":
           content:
             text/plain:
               example: Hat information not found
@@ -46,9 +46,9 @@ paths:
       description: Turns on power to the M-Bus
       operationId: hatOn
       responses:
-        200:
+        "200":
           description: OK
-        404:
+        "404":
           content:
             text/plain:
               example: M-Bus Master Hat not installed
@@ -60,9 +60,9 @@ paths:
       description: Turns off power to the M-Bus
       operationId: hatOff
       responses:
-        200:
+        "200":
           description: OK
-        404:
+        "404":
           content:
             text/plain:
               example: M-Bus Master Hat not installed
@@ -74,7 +74,8 @@ paths:
       description: Scan the specified device for slaves
       operationId: scan
       parameters:
-      - description: The serial device to scan - /dev/ is pre-pended to {device} by M-Bus HTTPD before scanning
+      - description: The serial device to scan - /dev/ is pre-pended to {device} by
+          M-Bus HTTPD before scanning
         example: ttyAMA0
         explode: false
         in: path
@@ -93,32 +94,35 @@ paths:
           $ref: '#/components/schemas/baudrate'
         style: simple
       responses:
-        200:
+        "200":
           content:
             text/xml:
               schema:
                 $ref: '#/components/schemas/slaves'
           description: OK
-        400:
+        "400":
           content:
             text/plain:
               example: Baudrate {baudrate} is invalid
               schema:
                 $ref: '#/components/schemas/textError'
           description: Bad request
-        404:
+        "404":
           content:
             text/plain:
               example: Device /dev/{device} does not exist
               schema:
                 $ref: '#/components/schemas/textError'
-          description: Not found (e.g. device not found, or M-Bus HTTPD is unauthorized to access it, or to change baud rate to that specified, device not responding etc)
+          description: Not found (e.g. device not found, or M-Bus HTTPD is unauthorized
+            to access it, or to change baud rate to that specified, device not responding
+            etc)
   /mbus/get/{device}/{baudrate}/{address}:
     post:
       description: Gets data from the slave identified by {address}
       operationId: get
       parameters:
-      - description: The serial device to scan - /dev/ is pre-pended to {device} by M-Bus HTTPD before scanning
+      - description: The serial device to scan - /dev/ is pre-pended to {device} by
+          M-Bus HTTPD before scanning
         example: ttyAMA0
         explode: false
         in: path
@@ -146,26 +150,27 @@ paths:
           $ref: '#/components/schemas/address'
         style: simple
       responses:
-        200:
+        "200":
           content:
             text/xml:
               schema:
                 $ref: '#/components/schemas/mbusData'
           description: OK
-        400:
+        "400":
           content:
             text/plain:
               example: Baudrate {baudrate} is invalid
               schema:
                 $ref: '#/components/schemas/textError'
           description: Bad request
-        404:
+        "404":
           content:
             text/plain:
               example: Slave {address} not responding
               schema:
                 $ref: '#/components/schemas/textError'
-          description: Not found (or M-Bus HTTPD is unauthorized to access it, or to change baud rate to that specified, etc)
+          description: Not found (or M-Bus HTTPD is unauthorized to access it, or
+            to change baud rate to that specified, etc)
 components:
   schemas:
     yaml:
@@ -177,11 +182,13 @@ components:
       example: Device /dev/{device} does not exist
       type: string
     device:
-      description: The device the M-Bus is connected to - /dev/ is prepended to {device} by M-Bus HTTPD
+      description: The device the M-Bus is connected to - /dev/ is prepended to {device}
+        by M-Bus HTTPD
       example: ttyAMA0
       type: string
     baudrate:
-      description: Baudrate to use for the communication - valid values 300, 600, 1200, 2400, 4800, 9600
+      description: Baudrate to use for the communication - valid values 300, 600,
+        1200, 2400, 4800, 9600
       enum:
       - 300
       - 600

@@ -4,37 +4,13 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-**api**](default_api.md#api) | **GET** /mbus/api | 
 **get**](default_api.md#get) | **POST** /mbus/get/{device}/{baudrate}/{address} | 
 **hat**](default_api.md#hat) | **GET** /mbus/hat | 
 **hatOff**](default_api.md#hatOff) | **POST** /mbus/hat/off | 
 **hatOn**](default_api.md#hatOn) | **POST** /mbus/hat/on | 
+**mbus_api**](default_api.md#mbus_api) | **GET** /mbus/api | 
 **scan**](default_api.md#scan) | **POST** /mbus/scan/{device}/{baudrate} | 
 
-
-# **api**
-> String api()
-
-
-Returns this API specification
-
-### Required Parameters
-This endpoint does not need any parameter.
-
-### Return type
-
-[**String**](string.md)
-
-### Authorization
-
-No authorization required
-
-### HTTP request headers
-
- - **Content-Type**: Not defined
- - **Accept**: text/plain, text/x-yaml, 
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **get**
 > String get(device, baudrate, address)
@@ -134,6 +110,30 @@ No authorization required
 
  - **Content-Type**: Not defined
  - **Accept**: text/plain, 
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **mbus_api**
+> String mbus_api()
+
+
+Returns this API specification
+
+### Required Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**String**](string.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: text/plain, text/x-yaml, 
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
