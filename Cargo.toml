@@ -47,7 +47,7 @@ serde_json = "1.0"
 # Crates included if required by the API definition
 # TODO: this should be updated to point at the official crate once
 # https://github.com/RReverser/serde-xml-rs/pull/45 is accepted upstream
-serde-xml-rs = {git = "git://github.com/Metaswitch/serde-xml-rs.git" , branch = "master"}
+serde-xml-rs = { version = "0.3.0", package = "serde-xml-rs2" }
 
 # Common between server and client features
 hyper = {version = "0.12", optional = true}
