@@ -62,7 +62,7 @@ travis-ci = { repository = \\"packom/mbus-api\\", branch = \\"master\\" }
 " > /tmp/Cargo.toml && \
                     tail -n +9 ./Cargo.toml >> /tmp/Cargo.toml && \
                     cp /tmp/Cargo.toml ./ && \
-                    find examples -name *.rs -print0 | xargs -0 sed -i 's/openapi_client/pca9956b_api/' && \
+                    find examples -name *.rs -print0 | xargs -0 sed -i 's/openapi_client/mbus_api/' && \
                     git diff -- . ':(exclude)README.md' > /tmp/diff && \
                     cat /tmp/diff && \
                     echo `stat --printf="%s" /tmp/diff` > /tmp/diff_size && \
