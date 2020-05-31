@@ -55,8 +55,8 @@ keywords = [\\"mbus\\",\\"m-bus\\",\\"openapi\\",\\"swagger\\",\\"http\\"]
 categories = [\\"api-bindings\\",\\"hardware-support\\",\\"network-programming\\",\\"embedded\\",\\"web-programming\\"]
 
 [badges]
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "packom/mbus-api", branch = "master" }
+maintenance = { status = \\"actively-developed\\" }
+travis-ci = { repository = \\"packom/mbus-api\\", branch = \\"master\\" }
 " > /tmp/Cargo.toml && \
                     tail -n +9 ./Cargo.toml >> /tmp/Cargo.toml && \
                     cp /tmp/Cargo.toml ./ && \
