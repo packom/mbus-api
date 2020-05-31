@@ -21,8 +21,9 @@ pipeline {
         stage('Auto-gen') {
             steps {
                 sh '''
-                    cd ~/builds && \
+                    cd ~/builds/mbus-api && \
                     rm -fr docs src examples && \
+                    cd ~/builds && \
                     java -jar ~/openapi-generator/modules/openapi-generator-cli/target/openapi-generator-cli.jar generate --generate-alias-as-model -i ./mbus-api/api/openapi.yaml -g rust-server -o ./mbus-api
                     cd mbus-api && \
                     echo `awk '/^version / {print $3;}' Cargo.toml | sed 's/"//g'` > /tmp/new_version && \
