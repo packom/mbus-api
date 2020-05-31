@@ -22,6 +22,7 @@ pipeline {
             steps {
                 sh '''
                     cd ~/builds && \
+                    rm -fr docs src examples && \
                     java -jar ~/openapi-generator/modules/openapi-generator-cli/target/openapi-generator-cli.jar generate --generate-alias-as-model -i ./mbus-api/api/openapi.yaml -g rust-server -o ./mbus-api
                     cd mbus-api && \
                     echo `awk '/^version / {print $3;}' Cargo.toml | sed 's/"//g'` > /tmp/new_version && \
