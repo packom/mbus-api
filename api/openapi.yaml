@@ -1,7 +1,7 @@
 openapi: 3.0.1
 info:
   title: M-Bus HTTPD API
-  version: 0.2.0
+  version: 0.3.0
 servers:
 - url: /
 paths:
@@ -171,6 +171,71 @@ paths:
                 $ref: '#/components/schemas/textError'
           description: Not found (or M-Bus HTTPD is unauthorized to access it, or
             to change baud rate to that specified, etc)
+  /mbus/getMulti/{device}/{baudrate}/{address}/{maxframes}:
+    post:
+      description: Gets data from the slave identified by {address}, and supports
+        multiple responses from the slave
+      operationId: getMulti
+      parameters:
+      - description: The serial device to scan - /dev/ is pre-pended to {device} by
+          M-Bus HTTPD before scanning
+        example: ttyAMA0
+        explode: false
+        in: path
+        name: device
+        required: true
+        schema:
+          $ref: '#/components/schemas/device'
+        style: simple
+      - description: Baudrate to communicate with M-Bus devices
+        example: 2400
+        explode: false
+        in: path
+        name: baudrate
+        required: true
+        schema:
+          $ref: '#/components/schemas/baudrate'
+        style: simple
+      - description: The slave device to get data from
+        example: 48
+        explode: false
+        in: path
+        name: address
+        required: true
+        schema:
+          $ref: '#/components/schemas/address'
+        style: simple
+      - description: The slave device to get data from
+        example: 16
+        explode: false
+        in: path
+        name: maxframes
+        required: true
+        schema:
+          $ref: '#/components/schemas/maxframes'
+        style: simple
+      responses:
+        "200":
+          content:
+            text/xml:
+              schema:
+                $ref: '#/components/schemas/mbusData'
+          description: OK
+        "400":
+          content:
+            text/plain:
+              example: Baudrate {baudrate} is invalid
+              schema:
+                $ref: '#/components/schemas/textError'
+          description: Bad request
+        "404":
+          content:
+            text/plain:
+              example: Slave {address} not responding
+              schema:
+                $ref: '#/components/schemas/textError'
+          description: Not found (or M-Bus HTTPD is unauthorized to access it, or
+            to change baud rate to that specified, etc)
 components:
   schemas:
     yaml:
@@ -210,6 +275,13 @@ components:
     address:
       description: Slave address
       example: 48
+      format: int32
+      maximum: 250
+      minimum: 1
+      type: integer
+    maxframes:
+      description: Max frames to listen for
+      example: 16
       format: int32
       maximum: 250
       minimum: 1
