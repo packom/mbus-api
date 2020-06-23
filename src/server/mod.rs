@@ -25,6 +25,7 @@ pub use crate::context;
 
 use crate::{Api,
      GetResponse,
+     GetMultiResponse,
      HatResponse,
      HatOffResponse,
      HatOnResponse,
@@ -39,6 +40,7 @@ mod paths {
         pub static ref GLOBAL_REGEX_SET: regex::RegexSet = regex::RegexSet::new(vec![
             r"^/mbus/api$",
             r"^/mbus/get/(?P<device>[^/?#]*)/(?P<baudrate>[^/?#]*)/(?P<address>[^/?#]*)$",
+            r"^/mbus/getMulti/(?P<device>[^/?#]*)/(?P<baudrate>[^/?#]*)/(?P<address>[^/?#]*)/(?P<maxframes>[^/?#]*)$",
             r"^/mbus/hat$",
             r"^/mbus/hat/off$",
             r"^/mbus/hat/on$",
@@ -53,10 +55,16 @@ mod paths {
             regex::Regex::new(r"^/mbus/get/(?P<device>[^/?#]*)/(?P<baudrate>[^/?#]*)/(?P<address>[^/?#]*)$")
                 .expect("Unable to create regex for MBUS_GET_DEVICE_BAUDRATE_ADDRESS");
     }
-    pub(crate) static ID_MBUS_HAT: usize = 2;
-    pub(crate) static ID_MBUS_HAT_OFF: usize = 3;
-    pub(crate) static ID_MBUS_HAT_ON: usize = 4;
-    pub(crate) static ID_MBUS_SCAN_DEVICE_BAUDRATE: usize = 5;
+    pub(crate) static ID_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES: usize = 2;
+    lazy_static! {
+        pub static ref REGEX_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES: regex::Regex =
+            regex::Regex::new(r"^/mbus/getMulti/(?P<device>[^/?#]*)/(?P<baudrate>[^/?#]*)/(?P<address>[^/?#]*)/(?P<maxframes>[^/?#]*)$")
+                .expect("Unable to create regex for MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES");
+    }
+    pub(crate) static ID_MBUS_HAT: usize = 3;
+    pub(crate) static ID_MBUS_HAT_OFF: usize = 4;
+    pub(crate) static ID_MBUS_HAT_ON: usize = 5;
+    pub(crate) static ID_MBUS_SCAN_DEVICE_BAUDRATE: usize = 6;
     lazy_static! {
         pub static ref REGEX_MBUS_SCAN_DEVICE_BAUDRATE: regex::Regex =
             regex::Regex::new(r"^/mbus/scan/(?P<device>[^/?#]*)/(?P<baudrate>[^/?#]*)$")
@@ -248,6 +256,140 @@ where
                                                         CONTENT_TYPE,
                                                         HeaderValue::from_str("text/plain")
                                                             .expect("Unable to create Content-Type header for GET_NOT_FOUND"));
+                                                    let body = body;
+                                                    *response.body_mut() = Body::from(body);
+                                                },
+                                            },
+                                            Err(_) => {
+                                                // Application code returned an error. This should not happen, as the implementation should
+                                                // return a valid response.
+                                                *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+                                                *response.body_mut() = Body::from("An internal error occurred");
+                                            },
+                                        }
+
+                                        future::ok(response)
+                                    }
+                                ))
+                        }}
+                }) as Self::Future
+            },
+
+            // GetMulti - POST /mbus/getMulti/{device}/{baudrate}/{address}/{maxframes}
+            &hyper::Method::POST if path.matched(paths::ID_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES) => {
+                // Path parameters
+                let path: &str = &uri.path().to_string();
+                let path_params =
+                    paths::REGEX_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES
+                    .captures(&path)
+                    .unwrap_or_else(||
+                        panic!("Path {} matched RE MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES in set but failed match against \"{}\"", path, paths::REGEX_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES.as_str())
+                    );
+
+                let param_device = match percent_encoding::percent_decode(path_params["device"].as_bytes()).decode_utf8() {
+                    Ok(param_device) => match param_device.parse::<String>() {
+                        Ok(param_device) => param_device,
+                        Err(e) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't parse path parameter device: {}", e)))
+                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                    },
+                    Err(_) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["device"])))
+                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                };
+
+                let param_baudrate = match percent_encoding::percent_decode(path_params["baudrate"].as_bytes()).decode_utf8() {
+                    Ok(param_baudrate) => match param_baudrate.parse::<models::Baudrate>() {
+                        Ok(param_baudrate) => param_baudrate,
+                        Err(e) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't parse path parameter baudrate: {}", e)))
+                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                    },
+                    Err(_) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["baudrate"])))
+                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                };
+
+                let param_address = match percent_encoding::percent_decode(path_params["address"].as_bytes()).decode_utf8() {
+                    Ok(param_address) => match param_address.parse::<i32>() {
+                        Ok(param_address) => param_address,
+                        Err(e) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't parse path parameter address: {}", e)))
+                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                    },
+                    Err(_) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["address"])))
+                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                };
+
+                let param_maxframes = match percent_encoding::percent_decode(path_params["maxframes"].as_bytes()).decode_utf8() {
+                    Ok(param_maxframes) => match param_maxframes.parse::<i32>() {
+                        Ok(param_maxframes) => param_maxframes,
+                        Err(e) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't parse path parameter maxframes: {}", e)))
+                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                    },
+                    Err(_) => return Box::new(future::ok(Response::builder()
+                                        .status(StatusCode::BAD_REQUEST)
+                                        .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["maxframes"])))
+                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                };
+
+                Box::new({
+                        {{
+                                Box::new(
+                                    api_impl.get_multi(
+                                            param_device,
+                                            param_baudrate,
+                                            param_address,
+                                            param_maxframes,
+                                        &context
+                                    ).then(move |result| {
+                                        let mut response = Response::new(Body::empty());
+                                        response.headers_mut().insert(
+                                            HeaderName::from_static("x-span-id"),
+                                            HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
+                                                .expect("Unable to create X-Span-ID header value"));
+
+                                        match result {
+                                            Ok(rsp) => match rsp {
+                                                GetMultiResponse::OK
+                                                    (body)
+                                                => {
+                                                    *response.status_mut() = StatusCode::from_u16(200).expect("Unable to turn 200 into a StatusCode");
+                                                    response.headers_mut().insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_str("text/xml")
+                                                            .expect("Unable to create Content-Type header for GET_MULTI_OK"));
+                                                    let body = serde_xml_rs::to_string(&body).expect("impossible to fail to serialize");
+                                                    *response.body_mut() = Body::from(body);
+                                                },
+                                                GetMultiResponse::BadRequest
+                                                    (body)
+                                                => {
+                                                    *response.status_mut() = StatusCode::from_u16(400).expect("Unable to turn 400 into a StatusCode");
+                                                    response.headers_mut().insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_str("text/plain")
+                                                            .expect("Unable to create Content-Type header for GET_MULTI_BAD_REQUEST"));
+                                                    let body = body;
+                                                    *response.body_mut() = Body::from(body);
+                                                },
+                                                GetMultiResponse::NotFound
+                                                    (body)
+                                                => {
+                                                    *response.status_mut() = StatusCode::from_u16(404).expect("Unable to turn 404 into a StatusCode");
+                                                    response.headers_mut().insert(
+                                                        CONTENT_TYPE,
+                                                        HeaderValue::from_str("text/plain")
+                                                            .expect("Unable to create Content-Type header for GET_MULTI_NOT_FOUND"));
                                                     let body = body;
                                                     *response.body_mut() = Body::from(body);
                                                 },
@@ -575,6 +717,7 @@ where
 
             _ if path.matched(paths::ID_MBUS_API) => method_not_allowed(),
             _ if path.matched(paths::ID_MBUS_GET_DEVICE_BAUDRATE_ADDRESS) => method_not_allowed(),
+            _ if path.matched(paths::ID_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES) => method_not_allowed(),
             _ if path.matched(paths::ID_MBUS_HAT) => method_not_allowed(),
             _ if path.matched(paths::ID_MBUS_HAT_OFF) => method_not_allowed(),
             _ if path.matched(paths::ID_MBUS_HAT_ON) => method_not_allowed(),
@@ -606,6 +749,8 @@ impl<T> RequestParser<T> for ApiRequestParser {
         match request.method() {
             // Get - POST /mbus/get/{device}/{baudrate}/{address}
             &hyper::Method::POST if path.matched(paths::ID_MBUS_GET_DEVICE_BAUDRATE_ADDRESS) => Ok("Get"),
+            // GetMulti - POST /mbus/getMulti/{device}/{baudrate}/{address}/{maxframes}
+            &hyper::Method::POST if path.matched(paths::ID_MBUS_GETMULTI_DEVICE_BAUDRATE_ADDRESS_MAXFRAMES) => Ok("GetMulti"),
             // Hat - GET /mbus/hat
             &hyper::Method::GET if path.matched(paths::ID_MBUS_HAT) => Ok("Hat"),
             // HatOff - POST /mbus/hat/off

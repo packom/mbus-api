@@ -5,6 +5,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 **get**](default_api.md#get) | **POST** /mbus/get/{device}/{baudrate}/{address} | 
+**getMulti**](default_api.md#getMulti) | **POST** /mbus/getMulti/{device}/{baudrate}/{address}/{maxframes} | 
 **hat**](default_api.md#hat) | **GET** /mbus/hat | 
 **hatOff**](default_api.md#hatOff) | **POST** /mbus/hat/off | 
 **hatOn**](default_api.md#hatOn) | **POST** /mbus/hat/on | 
@@ -25,6 +26,36 @@ Name | Type | Description  | Notes
   **device** | **String**| The serial device to scan - /dev/ is pre-pended to {device} by M-Bus HTTPD before scanning | 
   **baudrate** | [****](.md)| Baudrate to communicate with M-Bus devices | 
   **address** | **i32**| The slave device to get data from | 
+
+### Return type
+
+[**String**](string.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: text/plain, text/xml, 
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getMulti**
+> String getMulti(device, baudrate, address, maxframes)
+
+
+Gets data from the slave identified by {address}, and supports multiple responses from the slave
+
+### Required Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+  **device** | **String**| The serial device to scan - /dev/ is pre-pended to {device} by M-Bus HTTPD before scanning | 
+  **baudrate** | [****](.md)| Baudrate to communicate with M-Bus devices | 
+  **address** | **i32**| The slave device to get data from | 
+  **maxframes** | **i32**| The slave device to get data from | 
 
 ### Return type
 

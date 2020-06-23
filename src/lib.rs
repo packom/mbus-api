@@ -9,11 +9,27 @@ pub use swagger::{ApiError, ContextWrapper};
 pub use futures::Future;
 
 pub const BASE_PATH: &'static str = "";
-pub const API_VERSION: &'static str = "0.2.0";
+pub const API_VERSION: &'static str = "0.3.0";
 
 #[derive(Debug, PartialEq)]
 #[must_use]
 pub enum GetResponse {
+    /// OK
+    OK
+    (String)
+    ,
+    /// Bad request
+    BadRequest
+    (String)
+    ,
+    /// Not found (or M-Bus HTTPD is unauthorized to access it, or to change baud rate to that specified, etc)
+    NotFound
+    (String)
+}
+
+#[derive(Debug, PartialEq)]
+#[must_use]
+pub enum GetMultiResponse {
     /// OK
     OK
     (String)
@@ -98,6 +114,14 @@ pub trait Api<C> {
         address: i32,
         context: &C) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>;
 
+    fn get_multi(
+        &self,
+        device: String,
+        baudrate: models::Baudrate,
+        address: i32,
+        maxframes: i32,
+        context: &C) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>;
+
     fn hat(
         &self,
         context: &C) -> Box<dyn Future<Item=HatResponse, Error=ApiError> + Send>;
@@ -130,6 +154,14 @@ pub trait ApiNoContext {
         baudrate: models::Baudrate,
         address: i32,
         ) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>;
+
+    fn get_multi(
+        &self,
+        device: String,
+        baudrate: models::Baudrate,
+        address: i32,
+        maxframes: i32,
+        ) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>;
 
     fn hat(
         &self,
@@ -176,6 +208,17 @@ impl<'a, T: Api<C>, C> ApiNoContext for ContextWrapper<'a, T, C> {
         ) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>
     {
         self.api().get(device, baudrate, address, &self.context())
+    }
+
+    fn get_multi(
+        &self,
+        device: String,
+        baudrate: models::Baudrate,
+        address: i32,
+        maxframes: i32,
+        ) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>
+    {
+        self.api().get_multi(device, baudrate, address, maxframes, &self.context())
     }
 
     fn hat(
