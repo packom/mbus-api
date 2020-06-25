@@ -115,11 +115,11 @@ impl<C> Api<C> for Server<C> where C: Has<XSpanIdString> + Send + Sync
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         context: &C) -> Result<GetResponse, ApiError>
     {
         let context = context.clone();
-        info!("get(\"{}\", {:?}, {}) - X-Span-ID: {:?}", device, baudrate, address, context.get().0.clone());
+        info!("get(\"{}\", {:?}, \"{}\") - X-Span-ID: {:?}", device, baudrate, address, context.get().0.clone());
         Err("Generic failuare".into())
     }
 
@@ -127,12 +127,12 @@ impl<C> Api<C> for Server<C> where C: Has<XSpanIdString> + Send + Sync
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         maxframes: i32,
         context: &C) -> Result<GetMultiResponse, ApiError>
     {
         let context = context.clone();
-        info!("get_multi(\"{}\", {:?}, {}, {}) - X-Span-ID: {:?}", device, baudrate, address, maxframes, context.get().0.clone());
+        info!("get_multi(\"{}\", {:?}, \"{}\", {}) - X-Span-ID: {:?}", device, baudrate, address, maxframes, context.get().0.clone());
         Err("Generic failuare".into())
     }
 

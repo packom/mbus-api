@@ -212,7 +212,7 @@ impl<T, C> hyper::service::Service<(Request<Body>, C)> for Service<T, C> where
                 };
 
                 let param_address = match percent_encoding::percent_decode(path_params["address"].as_bytes()).decode_utf8() {
-                    Ok(param_address) => match param_address.parse::<i32>() {
+                    Ok(param_address) => match param_address.parse::<String>() {
                         Ok(param_address) => param_address,
                         Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
@@ -324,7 +324,7 @@ impl<T, C> hyper::service::Service<(Request<Body>, C)> for Service<T, C> where
                 };
 
                 let param_address = match percent_encoding::percent_decode(path_params["address"].as_bytes()).decode_utf8() {
-                    Ok(param_address) => match param_address.parse::<i32>() {
+                    Ok(param_address) => match param_address.parse::<String>() {
                         Ok(param_address) => param_address,
                         Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)

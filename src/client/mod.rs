@@ -390,7 +390,7 @@ impl<S, C> Api<C> for Client<S, C> where
         &self,
         param_device: String,
         param_baudrate: models::Baudrate,
-        param_address: i32,
+        param_address: String,
         context: &C) -> Result<GetResponse, ApiError>
     {
         let mut client_service = self.client_service.clone();
@@ -498,7 +498,7 @@ impl<S, C> Api<C> for Client<S, C> where
         &self,
         param_device: String,
         param_baudrate: models::Baudrate,
-        param_address: i32,
+        param_address: String,
         param_maxframes: i32,
         context: &C) -> Result<GetMultiResponse, ApiError>
     {

@@ -9,7 +9,7 @@ use swagger::{ApiError, ContextWrapper};
 type ServiceError = Box<dyn Error + Send + Sync + 'static>;
 
 pub const BASE_PATH: &'static str = "";
-pub const API_VERSION: &'static str = "0.3.1";
+pub const API_VERSION: &'static str = "0.3.2";
 
 #[derive(Debug, PartialEq)]
 #[must_use]
@@ -116,14 +116,14 @@ pub trait Api<C: Send + Sync> {
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         context: &C) -> Result<GetResponse, ApiError>;
 
     async fn get_multi(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         maxframes: i32,
         context: &C) -> Result<GetMultiResponse, ApiError>;
 
@@ -163,14 +163,14 @@ pub trait ApiNoContext<C: Send + Sync> {
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         ) -> Result<GetResponse, ApiError>;
 
     async fn get_multi(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         maxframes: i32,
         ) -> Result<GetMultiResponse, ApiError>;
 
@@ -225,7 +225,7 @@ impl<T: Api<C> + Send + Sync, C: Clone + Send + Sync> ApiNoContext<C> for Contex
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         ) -> Result<GetResponse, ApiError>
     {
         let context = self.context().clone();
@@ -236,7 +236,7 @@ impl<T: Api<C> + Send + Sync, C: Clone + Send + Sync> ApiNoContext<C> for Contex
         &self,
         device: String,
         baudrate: models::Baudrate,
-        address: i32,
+        address: String,
         maxframes: i32,
         ) -> Result<GetMultiResponse, ApiError>
     {

@@ -87,7 +87,7 @@ fn main() {
             let result = rt.block_on(client.get(
                   "ttyAMA0".to_string(),
                   serde_json::from_str::<models::Baudrate>(r#"2400"#).expect("Failed to parse JSON example"),
-                  48
+                  "48".to_string()
             ));
             info!("{:?} (X-Span-ID: {:?})", result, (client.context() as &dyn Has<XSpanIdString>).get().clone());
         },
@@ -95,7 +95,7 @@ fn main() {
             let result = rt.block_on(client.get_multi(
                   "ttyAMA0".to_string(),
                   serde_json::from_str::<models::Baudrate>(r#"2400"#).expect("Failed to parse JSON example"),
-                  48,
+                  "48".to_string(),
                   16
             ));
             info!("{:?} (X-Span-ID: {:?})", result, (client.context() as &dyn Has<XSpanIdString>).get().clone());

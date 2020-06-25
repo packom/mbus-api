@@ -5,33 +5,45 @@ use crate::models;
 use crate::header;
 
 
-/// Slave address
+/// Slave address (primary or secondary)
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
-pub struct Address(i32);
+pub struct Address(String);
 
-impl std::convert::From<i32> for Address {
-    fn from(x: i32) -> Self {
+impl std::convert::From<String> for Address {
+    fn from(x: String) -> Self {
         Address(x)
     }
 }
 
+impl std::string::ToString for Address {
+    fn to_string(&self) -> String {
+       self.0.to_string()
+    }
+}
 
-impl std::convert::From<Address> for i32 {
+impl std::str::FromStr for Address {
+    type Err = std::string::ParseError;
+    fn from_str(x: &str) -> std::result::Result<Self, Self::Err> {
+        std::result::Result::Ok(Address(x.to_string()))
+    }
+}
+
+impl std::convert::From<Address> for String {
     fn from(x: Address) -> Self {
         x.0
     }
 }
 
 impl std::ops::Deref for Address {
-    type Target = i32;
-    fn deref(&self) -> &i32 {
+    type Target = String;
+    fn deref(&self) -> &String {
         &self.0
     }
 }
 
 impl std::ops::DerefMut for Address {
-    fn deref_mut(&mut self) -> &mut i32 {
+    fn deref_mut(&mut self) -> &mut String {
         &mut self.0
     }
 }

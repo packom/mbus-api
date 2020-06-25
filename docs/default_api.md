@@ -25,7 +25,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
   **device** | **String**| The serial device to scan - /dev/ is pre-pended to {device} by M-Bus HTTPD before scanning | 
   **baudrate** | [****](.md)| Baudrate to communicate with M-Bus devices | 
-  **address** | **i32**| The slave device to get data from | 
+  **address** | **String**| The slave device to get data from | 
 
 ### Return type
 
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
   **device** | **String**| The serial device to scan - /dev/ is pre-pended to {device} by M-Bus HTTPD before scanning | 
   **baudrate** | [****](.md)| Baudrate to communicate with M-Bus devices | 
-  **address** | **i32**| The slave device to get data from | 
+  **address** | **String**| The slave device to get data from | 
   **maxframes** | **i32**| The slave device to get data from | 
 
 ### Return type
