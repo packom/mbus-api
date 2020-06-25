@@ -347,6 +347,47 @@ impl Hat {
     }
 }
 
+/// Max frames to listen for
+#[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
+pub struct Maxframes(i32);
+
+impl std::convert::From<i32> for Maxframes {
+    fn from(x: i32) -> Self {
+        Maxframes(x)
+    }
+}
+
+
+impl std::convert::From<Maxframes> for i32 {
+    fn from(x: Maxframes) -> Self {
+        x.0
+    }
+}
+
+impl std::ops::Deref for Maxframes {
+    type Target = i32;
+    fn deref(&self) -> &i32 {
+        &self.0
+    }
+}
+
+impl std::ops::DerefMut for Maxframes {
+    fn deref_mut(&mut self) -> &mut i32 {
+        &mut self.0
+    }
+}
+
+
+impl Maxframes {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
+
 /// M-Bus device data as an XML document
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]

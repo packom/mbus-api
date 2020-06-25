@@ -107,6 +107,7 @@ use mbus_api::{
     Api,
     ApiError,
     GetResponse,
+    GetMultiResponse,
     HatResponse,
     HatOffResponse,
     HatOnResponse,
@@ -125,6 +126,19 @@ impl<C> Api<C> for Server<C> where C: Has<XSpanIdString>{
     {
         let context = context.clone();
         info!("get(\"{}\", {:?}, {}) - X-Span-ID: {:?}", device, baudrate, address, context.get().0.clone());
+        Box::new(future::err("Generic failure".into()))
+    }
+
+    fn get_multi(
+        &self,
+        device: String,
+        baudrate: models::Baudrate,
+        address: i32,
+        maxframes: i32,
+        context: &C) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>
+    {
+        let context = context.clone();
+        info!("get_multi(\"{}\", {:?}, {}, {}) - X-Span-ID: {:?}", device, baudrate, address, maxframes, context.get().0.clone());
         Box::new(future::err("Generic failure".into()))
     }
 

@@ -7,6 +7,7 @@ use futures::{Future, future, Stream, stream};
 use mbus_api::{Api, ApiNoContext, Client, ContextWrapperExt, models,
                       ApiError,
                       GetResponse,
+                      GetMultiResponse,
                       HatResponse,
                       HatOffResponse,
                       HatOnResponse,
@@ -32,6 +33,7 @@ fn main() {
             .help("Sets the operation to run")
             .possible_values(&[
                 "Get",
+                "GetMulti",
                 "Hat",
                 "HatOff",
                 "HatOn",
@@ -85,6 +87,15 @@ fn main() {
                   "ttyAMA0".to_string(),
                   serde_json::from_str::<models::Baudrate>(r#"2400"#).expect("Failed to parse JSON example"),
                   48
+            ));
+            info!("{:?} (X-Span-ID: {:?})", result, (client.context() as &dyn Has<XSpanIdString>).get().clone());
+        },
+        Some("GetMulti") => {
+            let result = rt.block_on(client.get_multi(
+                  "ttyAMA0".to_string(),
+                  serde_json::from_str::<models::Baudrate>(r#"2400"#).expect("Failed to parse JSON example"),
+                  48,
+                  16
             ));
             info!("{:?} (X-Span-ID: {:?})", result, (client.context() as &dyn Has<XSpanIdString>).get().clone());
         },

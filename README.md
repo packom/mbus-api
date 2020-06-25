@@ -23,8 +23,8 @@ To see how to make this your own, look here:
 
 [README]((https://openapi-generator.tech))
 
-- API version: 0.2.0
-- Build date: 2020-05-31T13:21:57.837874Z[Etc/UTC]
+- API version: 0.3.0
+- Build date: 2020-06-23T20:28:51.081290Z[Etc/UTC]
 
 
 
@@ -72,6 +72,7 @@ To run a client, follow one of the following simple steps:
 
 ```
 cargo run --example client Get
+cargo run --example client GetMulti
 cargo run --example client Hat
 cargo run --example client HatOff
 cargo run --example client HatOn
@@ -111,6 +112,7 @@ All URIs are relative to *http://localhost*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**get**](docs/default_api.md#get) | **POST** /mbus/get/{device}/{baudrate}/{address} | 
+[**getMulti**](docs/default_api.md#getMulti) | **POST** /mbus/getMulti/{device}/{baudrate}/{address}/{maxframes} | 
 [**hat**](docs/default_api.md#hat) | **GET** /mbus/hat | 
 [**hatOff**](docs/default_api.md#hatOff) | **POST** /mbus/hat/off | 
 [**hatOn**](docs/default_api.md#hatOn) | **POST** /mbus/hat/on | 
@@ -124,6 +126,7 @@ Method | HTTP request | Description
  - [Baudrate](docs/Baudrate.md)
  - [Device](docs/Device.md)
  - [Hat](docs/Hat.md)
+ - [Maxframes](docs/Maxframes.md)
  - [MbusData](docs/MbusData.md)
  - [Slaves](docs/Slaves.md)
  - [TextError](docs/TextError.md)
