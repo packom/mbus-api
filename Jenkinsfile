@@ -1,7 +1,7 @@
 // https://www.jenkins.io/doc/book/pipeline/docker/
 pipeline {
     agent {
-        docker { image 'piersfinlayson/openapi-gen-amd64:0.0.1' }
+        docker { image 'piersfinlayson/openapi-gen-amd64:0.1.3' }
     }
     stages {
         stage('Clone') {
@@ -62,7 +62,7 @@ travis-ci = { repository = \\"packom/mbus-api\\", branch = \\"master\\" }
 " > /tmp/Cargo.toml && \
                     tail -n +9 ./Cargo.toml >> /tmp/Cargo.toml && \
                     cp /tmp/Cargo.toml ./ && \
-                    sed -i 's/git = \\"git:\\/\\/github.com\\/Metaswitch\\/serde\\-xml\\-rs\\.git\\" , branch = \\"master\\"/ version = \\"0\\.3\\.0\\", package = \\"serde\\-xml\\-rs2\\" /' ./Cargo.toml
+                    sed -i 's/git = \\"git:\\/\\/github.com\\/Metaswitch\\/serde\\-xml\\-rs\\.git\\" , branch = \\"master\\"/ version = \\"0\\.4\\.0\\" /' ./Cargo.toml
                     find examples -name *.rs -print0 | xargs -0 sed -i 's/openapi_client/mbus_api/' && \
                     git diff -- . ':(exclude)README.md' > /tmp/diff && \
                     cat /tmp/diff && \
