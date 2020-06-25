@@ -1,15 +1,15 @@
 #![allow(missing_docs, trivial_casts, unused_variables, unused_mut, unused_imports, unused_extern_crates, non_camel_case_types)]
 
+use async_trait::async_trait;
 use futures::Stream;
-use std::io::Error;
+use std::error::Error;
+use std::task::{Poll, Context};
+use swagger::{ApiError, ContextWrapper};
 
-#[deprecated(note = "Import swagger-rs directly")]
-pub use swagger::{ApiError, ContextWrapper};
-#[deprecated(note = "Import futures directly")]
-pub use futures::Future;
+type ServiceError = Box<dyn Error + Send + Sync + 'static>;
 
 pub const BASE_PATH: &'static str = "";
-pub const API_VERSION: &'static str = "0.3.0";
+pub const API_VERSION: &'static str = "0.3.1";
 
 #[derive(Debug, PartialEq)]
 #[must_use]
@@ -106,159 +106,188 @@ pub enum ScanResponse {
 }
 
 /// API
-pub trait Api<C> {
-    fn get(
+#[async_trait]
+pub trait Api<C: Send + Sync> {
+    fn poll_ready(&self, _cx: &mut Context) -> Poll<Result<(), Box<dyn Error + Send + Sync + 'static>>> {
+        Poll::Ready(Ok(()))
+    }
+
+    async fn get(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
-        context: &C) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<GetResponse, ApiError>;
 
-    fn get_multi(
+    async fn get_multi(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
         maxframes: i32,
-        context: &C) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<GetMultiResponse, ApiError>;
 
-    fn hat(
+    async fn hat(
         &self,
-        context: &C) -> Box<dyn Future<Item=HatResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<HatResponse, ApiError>;
 
-    fn hat_off(
+    async fn hat_off(
         &self,
-        context: &C) -> Box<dyn Future<Item=HatOffResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<HatOffResponse, ApiError>;
 
-    fn hat_on(
+    async fn hat_on(
         &self,
-        context: &C) -> Box<dyn Future<Item=HatOnResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<HatOnResponse, ApiError>;
 
-    fn mbus_api(
+    async fn mbus_api(
         &self,
-        context: &C) -> Box<dyn Future<Item=MbusApiResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<MbusApiResponse, ApiError>;
 
-    fn scan(
+    async fn scan(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        context: &C) -> Box<dyn Future<Item=ScanResponse, Error=ApiError> + Send>;
+        context: &C) -> Result<ScanResponse, ApiError>;
 
 }
 
-/// API without a `Context`
-pub trait ApiNoContext {
-    fn get(
+/// API where `Context` isn't passed on every API call
+#[async_trait]
+pub trait ApiNoContext<C: Send + Sync> {
+
+    fn poll_ready(&self, _cx: &mut Context) -> Poll<Result<(), Box<dyn Error + Send + Sync + 'static>>>;
+
+    fn context(&self) -> &C;
+
+    async fn get(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
-        ) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>;
+        ) -> Result<GetResponse, ApiError>;
 
-    fn get_multi(
+    async fn get_multi(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
         maxframes: i32,
-        ) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>;
+        ) -> Result<GetMultiResponse, ApiError>;
 
-    fn hat(
+    async fn hat(
         &self,
-        ) -> Box<dyn Future<Item=HatResponse, Error=ApiError> + Send>;
+        ) -> Result<HatResponse, ApiError>;
 
-    fn hat_off(
+    async fn hat_off(
         &self,
-        ) -> Box<dyn Future<Item=HatOffResponse, Error=ApiError> + Send>;
+        ) -> Result<HatOffResponse, ApiError>;
 
-    fn hat_on(
+    async fn hat_on(
         &self,
-        ) -> Box<dyn Future<Item=HatOnResponse, Error=ApiError> + Send>;
+        ) -> Result<HatOnResponse, ApiError>;
 
-    fn mbus_api(
+    async fn mbus_api(
         &self,
-        ) -> Box<dyn Future<Item=MbusApiResponse, Error=ApiError> + Send>;
+        ) -> Result<MbusApiResponse, ApiError>;
 
-    fn scan(
+    async fn scan(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        ) -> Box<dyn Future<Item=ScanResponse, Error=ApiError> + Send>;
+        ) -> Result<ScanResponse, ApiError>;
 
 }
 
 /// Trait to extend an API to make it easy to bind it to a context.
-pub trait ContextWrapperExt<'a, C> where Self: Sized {
+pub trait ContextWrapperExt<C: Send + Sync> where Self: Sized
+{
     /// Binds this API to a context.
-    fn with_context(self: &'a Self, context: C) -> ContextWrapper<'a, Self, C>;
+    fn with_context(self: Self, context: C) -> ContextWrapper<Self, C>;
 }
 
-impl<'a, T: Api<C> + Sized, C> ContextWrapperExt<'a, C> for T {
-    fn with_context(self: &'a T, context: C) -> ContextWrapper<'a, T, C> {
+impl<T: Api<C> + Send + Sync, C: Clone + Send + Sync> ContextWrapperExt<C> for T {
+    fn with_context(self: T, context: C) -> ContextWrapper<T, C> {
          ContextWrapper::<T, C>::new(self, context)
     }
 }
 
-impl<'a, T: Api<C>, C> ApiNoContext for ContextWrapper<'a, T, C> {
-    fn get(
+#[async_trait]
+impl<T: Api<C> + Send + Sync, C: Clone + Send + Sync> ApiNoContext<C> for ContextWrapper<T, C> {
+    fn poll_ready(&self, cx: &mut Context) -> Poll<Result<(), ServiceError>> {
+        self.api().poll_ready(cx)
+    }
+
+    fn context(&self) -> &C {
+        ContextWrapper::context(self)
+    }
+
+    async fn get(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
-        ) -> Box<dyn Future<Item=GetResponse, Error=ApiError> + Send>
+        ) -> Result<GetResponse, ApiError>
     {
-        self.api().get(device, baudrate, address, &self.context())
+        let context = self.context().clone();
+        self.api().get(device, baudrate, address, &context).await
     }
 
-    fn get_multi(
+    async fn get_multi(
         &self,
         device: String,
         baudrate: models::Baudrate,
         address: i32,
         maxframes: i32,
-        ) -> Box<dyn Future<Item=GetMultiResponse, Error=ApiError> + Send>
+        ) -> Result<GetMultiResponse, ApiError>
     {
-        self.api().get_multi(device, baudrate, address, maxframes, &self.context())
+        let context = self.context().clone();
+        self.api().get_multi(device, baudrate, address, maxframes, &context).await
     }
 
-    fn hat(
+    async fn hat(
         &self,
-        ) -> Box<dyn Future<Item=HatResponse, Error=ApiError> + Send>
+        ) -> Result<HatResponse, ApiError>
     {
-        self.api().hat(&self.context())
+        let context = self.context().clone();
+        self.api().hat(&context).await
     }
 
-    fn hat_off(
+    async fn hat_off(
         &self,
-        ) -> Box<dyn Future<Item=HatOffResponse, Error=ApiError> + Send>
+        ) -> Result<HatOffResponse, ApiError>
     {
-        self.api().hat_off(&self.context())
+        let context = self.context().clone();
+        self.api().hat_off(&context).await
     }
 
-    fn hat_on(
+    async fn hat_on(
         &self,
-        ) -> Box<dyn Future<Item=HatOnResponse, Error=ApiError> + Send>
+        ) -> Result<HatOnResponse, ApiError>
     {
-        self.api().hat_on(&self.context())
+        let context = self.context().clone();
+        self.api().hat_on(&context).await
     }
 
-    fn mbus_api(
+    async fn mbus_api(
         &self,
-        ) -> Box<dyn Future<Item=MbusApiResponse, Error=ApiError> + Send>
+        ) -> Result<MbusApiResponse, ApiError>
     {
-        self.api().mbus_api(&self.context())
+        let context = self.context().clone();
+        self.api().mbus_api(&context).await
     }
 
-    fn scan(
+    async fn scan(
         &self,
         device: String,
         baudrate: models::Baudrate,
-        ) -> Box<dyn Future<Item=ScanResponse, Error=ApiError> + Send>
+        ) -> Result<ScanResponse, ApiError>
     {
-        self.api().scan(device, baudrate, &self.context())
+        let context = self.context().clone();
+        self.api().scan(device, baudrate, &context).await
     }
 
 }
+
 
 #[cfg(feature = "client")]
 pub mod client;

@@ -1,27 +1,25 @@
-use std::marker::PhantomData;
-use futures::{Future, future, Stream, stream};
-use hyper;
-use hyper::{Request, Response, Error, StatusCode, Body, HeaderMap};
+use futures::{future, future::BoxFuture, Stream, stream, future::FutureExt, stream::TryStreamExt};
+use hyper::{Request, Response, StatusCode, Body, HeaderMap};
 use hyper::header::{HeaderName, HeaderValue, CONTENT_TYPE};
 use log::warn;
-use serde_json;
 #[allow(unused_imports)]
 use std::convert::{TryFrom, TryInto};
-use std::io;
-use url::form_urlencoded;
-#[allow(unused_imports)]
-use swagger;
-use swagger::{ApiError, XSpanIdString, Has, RequestParser};
+use std::error::Error;
+use std::future::Future;
+use std::marker::PhantomData;
+use std::task::{Context, Poll};
+use swagger::{ApiError, BodyExt, Has, RequestParser, XSpanIdString};
 pub use swagger::auth::Authorization;
 use swagger::auth::Scopes;
-use swagger::context::ContextualPayload;
-use serde_xml_rs;
+use url::form_urlencoded;
 
 #[allow(unused_imports)]
 use crate::models;
 use crate::header;
 
 pub use crate::context;
+
+type ServiceFuture = BoxFuture<'static, Result<Response<Body>, crate::ServiceError>>;
 
 use crate::{Api,
      GetResponse,
@@ -72,15 +70,17 @@ mod paths {
     }
 }
 
-pub struct MakeService<T, RC> {
+pub struct MakeService<T, C> where
+    T: Api<C> + Clone + Send + 'static,
+    C: Has<XSpanIdString>  + Send + Sync + 'static
+{
     api_impl: T,
-    marker: PhantomData<RC>,
+    marker: PhantomData<C>,
 }
 
-impl<T, RC> MakeService<T, RC>
-where
-    T: Api<RC> + Clone + Send + 'static,
-    RC: Has<XSpanIdString>  + 'static
+impl<T, C> MakeService<T, C> where
+    T: Api<C> + Clone + Send + 'static,
+    C: Has<XSpanIdString>  + Send + Sync + 'static
 {
     pub fn new(api_impl: T) -> Self {
         MakeService {
@@ -90,44 +90,45 @@ where
     }
 }
 
-impl<'a, T, SC, RC> hyper::service::MakeService<&'a SC> for MakeService<T, RC>
-where
-    T: Api<RC> + Clone + Send + 'static,
-    RC: Has<XSpanIdString>  + 'static + Send
+impl<T, C, Target> hyper::service::Service<Target> for MakeService<T, C> where
+    T: Api<C> + Clone + Send + 'static,
+    C: Has<XSpanIdString>  + Send + Sync + 'static
 {
-    type ReqBody = ContextualPayload<Body, RC>;
-    type ResBody = Body;
-    type Error = Error;
-    type Service = Service<T, RC>;
-    type Future = future::FutureResult<Self::Service, Self::MakeError>;
-    type MakeError = Error;
+    type Response = Service<T, C>;
+    type Error = crate::ServiceError;
+    type Future = future::Ready<Result<Self::Response, Self::Error>>;
 
-    fn make_service(&mut self, _ctx: &'a SC) -> Self::Future {
-        future::FutureResult::from(Ok(Service::new(
+    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, target: Target) -> Self::Future {
+        futures::future::ok(Service::new(
             self.api_impl.clone(),
-        )))
+        ))
     }
 }
 
-type ServiceFuture = Box<dyn Future<Item = Response<Body>, Error = Error> + Send>;
-
-fn method_not_allowed() -> ServiceFuture {
-    Box::new(future::ok(
+fn method_not_allowed() -> Result<Response<Body>, crate::ServiceError> {
+    Ok(
         Response::builder().status(StatusCode::METHOD_NOT_ALLOWED)
             .body(Body::empty())
             .expect("Unable to create Method Not Allowed response")
-    ))
+    )
 }
 
-pub struct Service<T, RC> {
+pub struct Service<T, C> where
+    T: Api<C> + Clone + Send + 'static,
+    C: Has<XSpanIdString>  + Send + Sync + 'static
+{
     api_impl: T,
-    marker: PhantomData<RC>,
+    marker: PhantomData<C>,
 }
 
-impl<T, RC> Service<T, RC>
-where
-    T: Api<RC> + Clone + Send + 'static,
-    RC: Has<XSpanIdString>  + 'static {
+impl<T, C> Service<T, C> where
+    T: Api<C> + Clone + Send + 'static,
+    C: Has<XSpanIdString>  + Send + Sync + 'static
+{
     pub fn new(api_impl: T) -> Self {
         Service {
             api_impl: api_impl,
@@ -136,23 +137,38 @@ where
     }
 }
 
-impl<T, C> hyper::service::Service for Service<T, C>
-where
+impl<T, C> Clone for Service<T, C> where
     T: Api<C> + Clone + Send + 'static,
-    C: Has<XSpanIdString>  + 'static + Send
+    C: Has<XSpanIdString>  + Send + Sync + 'static
 {
-    type ReqBody = ContextualPayload<Body, C>;
-    type ResBody = Body;
-    type Error = Error;
+    fn clone(&self) -> Self {
+        Service {
+            api_impl: self.api_impl.clone(),
+            marker: self.marker.clone(),
+        }
+    }
+}
+
+impl<T, C> hyper::service::Service<(Request<Body>, C)> for Service<T, C> where
+    T: Api<C> + Clone + Send + Sync + 'static,
+    C: Has<XSpanIdString>  + Send + Sync + 'static
+{
+    type Response = Response<Body>;
+    type Error = crate::ServiceError;
     type Future = ServiceFuture;
 
-    fn call(&mut self, req: Request<Self::ReqBody>) -> Self::Future {
-        let api_impl = self.api_impl.clone();
-        let (parts, body) = req.into_parts();
+    fn poll_ready(&mut self, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
+        self.api_impl.poll_ready(cx)
+    }
+
+    fn call(&mut self, req: (Request<Body>, C)) -> Self::Future { async fn run<T, C>(mut api_impl: T, req: (Request<Body>, C)) -> Result<Response<Body>, crate::ServiceError> where
+        T: Api<C> + Clone + Send + 'static,
+        C: Has<XSpanIdString>  + Send + Sync + 'static
+    {
+        let (request, context) = req;
+        let (parts, body) = request.into_parts();
         let (method, uri, headers) = (parts.method, parts.uri, parts.headers);
         let path = paths::GLOBAL_REGEX_SET.matches(uri.path());
-        let mut context = body.context;
-        let body = body.inner;
 
         match &method {
 
@@ -170,56 +186,53 @@ where
                 let param_device = match percent_encoding::percent_decode(path_params["device"].as_bytes()).decode_utf8() {
                     Ok(param_device) => match param_device.parse::<String>() {
                         Ok(param_device) => param_device,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter device: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["device"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
                 let param_baudrate = match percent_encoding::percent_decode(path_params["baudrate"].as_bytes()).decode_utf8() {
                     Ok(param_baudrate) => match param_baudrate.parse::<models::Baudrate>() {
                         Ok(param_baudrate) => param_baudrate,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter baudrate: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["baudrate"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
                 let param_address = match percent_encoding::percent_decode(path_params["address"].as_bytes()).decode_utf8() {
                     Ok(param_address) => match param_address.parse::<i32>() {
                         Ok(param_address) => param_address,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter address: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["address"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.get(
+                                let result = api_impl.get(
                                             param_device,
                                             param_baudrate,
                                             param_address,
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -268,11 +281,7 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             // GetMulti - POST /mbus/getMulti/{device}/{baudrate}/{address}/{maxframes}
@@ -289,71 +298,68 @@ where
                 let param_device = match percent_encoding::percent_decode(path_params["device"].as_bytes()).decode_utf8() {
                     Ok(param_device) => match param_device.parse::<String>() {
                         Ok(param_device) => param_device,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter device: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["device"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
                 let param_baudrate = match percent_encoding::percent_decode(path_params["baudrate"].as_bytes()).decode_utf8() {
                     Ok(param_baudrate) => match param_baudrate.parse::<models::Baudrate>() {
                         Ok(param_baudrate) => param_baudrate,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter baudrate: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["baudrate"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
                 let param_address = match percent_encoding::percent_decode(path_params["address"].as_bytes()).decode_utf8() {
                     Ok(param_address) => match param_address.parse::<i32>() {
                         Ok(param_address) => param_address,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter address: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["address"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
                 let param_maxframes = match percent_encoding::percent_decode(path_params["maxframes"].as_bytes()).decode_utf8() {
                     Ok(param_maxframes) => match param_maxframes.parse::<i32>() {
                         Ok(param_maxframes) => param_maxframes,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter maxframes: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["maxframes"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.get_multi(
+                                let result = api_impl.get_multi(
                                             param_device,
                                             param_baudrate,
                                             param_address,
                                             param_maxframes,
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -402,23 +408,16 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             // Hat - GET /mbus/hat
             &hyper::Method::GET if path.matched(paths::ID_MBUS_HAT) => {
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.hat(
+                                let result = api_impl.hat(
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -456,23 +455,16 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             // HatOff - POST /mbus/hat/off
             &hyper::Method::POST if path.matched(paths::ID_MBUS_HAT_OFF) => {
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.hat_off(
+                                let result = api_impl.hat_off(
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -503,23 +495,16 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             // HatOn - POST /mbus/hat/on
             &hyper::Method::POST if path.matched(paths::ID_MBUS_HAT_ON) => {
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.hat_on(
+                                let result = api_impl.hat_on(
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -550,23 +535,16 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             // MbusApi - GET /mbus/api
             &hyper::Method::GET if path.matched(paths::ID_MBUS_API) => {
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.mbus_api(
+                                let result = api_impl.mbus_api(
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -604,11 +582,7 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             // Scan - POST /mbus/scan/{device}/{baudrate}
@@ -625,41 +599,38 @@ where
                 let param_device = match percent_encoding::percent_decode(path_params["device"].as_bytes()).decode_utf8() {
                     Ok(param_device) => match param_device.parse::<String>() {
                         Ok(param_device) => param_device,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter device: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["device"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
                 let param_baudrate = match percent_encoding::percent_decode(path_params["baudrate"].as_bytes()).decode_utf8() {
                     Ok(param_baudrate) => match param_baudrate.parse::<models::Baudrate>() {
                         Ok(param_baudrate) => param_baudrate,
-                        Err(e) => return Box::new(future::ok(Response::builder()
+                        Err(e) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't parse path parameter baudrate: {}", e)))
-                                        .expect("Unable to create Bad Request response for invalid path parameter"))),
+                                        .expect("Unable to create Bad Request response for invalid path parameter")),
                     },
-                    Err(_) => return Box::new(future::ok(Response::builder()
+                    Err(_) => return Ok(Response::builder()
                                         .status(StatusCode::BAD_REQUEST)
                                         .body(Body::from(format!("Couldn't percent-decode path parameter as UTF-8: {}", &path_params["baudrate"])))
-                                        .expect("Unable to create Bad Request response for invalid percent decode")))
+                                        .expect("Unable to create Bad Request response for invalid percent decode"))
                 };
 
-                Box::new({
-                        {{
-                                Box::new(
-                                    api_impl.scan(
+                                let result = api_impl.scan(
                                             param_device,
                                             param_baudrate,
                                         &context
-                                    ).then(move |result| {
-                                        let mut response = Response::new(Body::empty());
-                                        response.headers_mut().insert(
+                                    ).await;
+                                let mut response = Response::new(Body::empty());
+                                response.headers_mut().insert(
                                             HeaderName::from_static("x-span-id"),
                                             HeaderValue::from_str((&context as &dyn Has<XSpanIdString>).get().0.clone().to_string().as_str())
                                                 .expect("Unable to create X-Span-ID header value"));
@@ -708,11 +679,7 @@ where
                                             },
                                         }
 
-                                        future::ok(response)
-                                    }
-                                ))
-                        }}
-                }) as Self::Future
+                                        Ok(response)
             },
 
             _ if path.matched(paths::ID_MBUS_API) => method_not_allowed(),
@@ -722,23 +689,11 @@ where
             _ if path.matched(paths::ID_MBUS_HAT_OFF) => method_not_allowed(),
             _ if path.matched(paths::ID_MBUS_HAT_ON) => method_not_allowed(),
             _ if path.matched(paths::ID_MBUS_SCAN_DEVICE_BAUDRATE) => method_not_allowed(),
-            _ => Box::new(future::ok(
-                Response::builder().status(StatusCode::NOT_FOUND)
+            _ => Ok(Response::builder().status(StatusCode::NOT_FOUND)
                     .body(Body::empty())
-                    .expect("Unable to create Not Found response")
-            )) as Self::Future
+                    .expect("Unable to create Not Found response"))
         }
-    }
-}
-
-impl<T, C> Clone for Service<T, C> where T: Clone
-{
-    fn clone(&self) -> Self {
-        Service {
-            api_impl: self.api_impl.clone(),
-            marker: self.marker.clone(),
-        }
-    }
+    } Box::pin(run(self.api_impl.clone(), req)) }
 }
 
 /// Request parser for `Api`.
