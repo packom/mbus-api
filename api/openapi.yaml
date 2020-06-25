@@ -1,7 +1,7 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
   title: M-Bus HTTPD API
-  version: 0.3.1
+  version: 0.3.2
 servers:
 - url: /
 paths:
@@ -273,12 +273,12 @@ components:
       example: <?xml version="1.0" encoding="UTF-8"?>...
       type: string
     address:
-      description: Slave address
-      example: 48
-      format: int32
-      maximum: 250
-      minimum: 1
-      type: integer
+      description: Slave address (primary or secondary)
+      example: "48"
+      format: string
+      maxLength: 16
+      minLength: 1
+      type: string
     maxframes:
       description: Max frames to listen for
       example: 16
