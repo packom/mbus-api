@@ -153,7 +153,6 @@ paths:
       responses:
         "200":
           content:
-            # text/xml:
             text/plain:
               schema:
                 $ref: '#/components/schemas/mbusData'
@@ -219,7 +218,6 @@ paths:
       responses:
         "200":
           content:
-            # text/xml:
             text/plain:
               schema:
                 $ref: '#/components/schemas/mbusData'

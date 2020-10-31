@@ -245,9 +245,9 @@ impl<T, C> hyper::service::Service<(Request<Body>, C)> for Service<T, C> where
                                                     *response.status_mut() = StatusCode::from_u16(200).expect("Unable to turn 200 into a StatusCode");
                                                     response.headers_mut().insert(
                                                         CONTENT_TYPE,
-                                                        HeaderValue::from_str("text/xml")
+                                                        HeaderValue::from_str("text/plain")
                                                             .expect("Unable to create Content-Type header for GET_OK"));
-                                                    let body = serde_xml_rs::to_string(&body).expect("impossible to fail to serialize");
+                                                    let body = body;
                                                     *response.body_mut() = Body::from(body);
                                                 },
                                                 GetResponse::BadRequest
@@ -372,9 +372,9 @@ impl<T, C> hyper::service::Service<(Request<Body>, C)> for Service<T, C> where
                                                     *response.status_mut() = StatusCode::from_u16(200).expect("Unable to turn 200 into a StatusCode");
                                                     response.headers_mut().insert(
                                                         CONTENT_TYPE,
-                                                        HeaderValue::from_str("text/xml")
+                                                        HeaderValue::from_str("text/plain")
                                                             .expect("Unable to create Content-Type header for GET_MULTI_OK"));
-                                                    let body = serde_xml_rs::to_string(&body).expect("impossible to fail to serialize");
+                                                    let body = body;
                                                     *response.body_mut() = Body::from(body);
                                                 },
                                                 GetMultiResponse::BadRequest
