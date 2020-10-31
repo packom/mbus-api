@@ -96,7 +96,6 @@ paths:
       responses:
         "200":
           content:
-            # text/xml:
             text/plain:
               example: Found a M-Bus device at address 1
               schema:
@@ -269,8 +268,6 @@ components:
     slaves:
       description: Output of libmbus scan command
       example: Found a M-Bus device at address 1
-      # description: An XML list of slaves
-      # example: <slave><address>1</address></slave><slave><address>48</address></slave>
       type: string
     mbusData:
       description: M-Bus device data as an XML document

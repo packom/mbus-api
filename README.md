@@ -23,8 +23,8 @@ To see how to make this your own, look here:
 
 [README]((https://openapi-generator.tech))
 
-- API version: 0.3.2
-- Build date: 2020-06-25T15:03:38.133083Z[Etc/UTC]
+- API version: 0.3.3
+- Build date: 2020-10-31T14:18:04.886240Z[Etc/UTC]
 
 
 
