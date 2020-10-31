@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: M-Bus HTTPD API
-  version: 0.3.2
+  version: 0.3.3
 servers:
 - url: /
 paths:
@@ -96,7 +96,9 @@ paths:
       responses:
         "200":
           content:
-            text/xml:
+            # text/xml:
+            text/plain:
+              example: Found a M-Bus device at address 1
               schema:
                 $ref: '#/components/schemas/slaves'
           description: OK
@@ -265,8 +267,10 @@ components:
       format: int32
       type: integer
     slaves:
-      description: An XML list of slaves
-      example: <slave><address>1</address></slave><slave><address>48</address></slave>
+      description: Output of libmbus scan command
+      example: Found a M-Bus device at address 1
+      # description: An XML list of slaves
+      # example: <slave><address>1</address></slave><slave><address>48</address></slave>
       type: string
     mbusData:
       description: M-Bus device data as an XML document
