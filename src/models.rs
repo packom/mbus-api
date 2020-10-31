@@ -453,7 +453,7 @@ impl MbusData {
     }
 }
 
-/// An XML list of slaves
+/// Output of libmbus scan command
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "conversion", derive(frunk::LabelledGeneric))]
 pub struct Slaves(String);
