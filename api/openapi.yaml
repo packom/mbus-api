@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: M-Bus HTTPD API
-  version: 0.3.4
+  version: 0.3.5
 servers:
 - url: /
 paths:
@@ -153,7 +153,7 @@ paths:
       responses:
         "200":
           content:
-            text/plain:
+            application/xml:
               schema:
                 $ref: '#/components/schemas/mbusData'
           description: OK
@@ -218,7 +218,7 @@ paths:
       responses:
         "200":
           content:
-            text/plain:
+            application/xml:
               schema:
                 $ref: '#/components/schemas/mbusData'
           description: OK
