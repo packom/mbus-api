@@ -442,7 +442,10 @@ impl<S, C> Api<C> for Client<S, C> where
                         .map_err(|e| ApiError(format!("Failed to read response: {}", e))).await?;
                 let body = str::from_utf8(&body)
                     .map_err(|e| ApiError(format!("Response was not valid UTF8: {}", e)))?;
-                let body = body.to_string();
+                // ToDo: this will move to swagger-rs and become a standard From conversion trait
+                // once https://github.com/RReverser/serde-xml-rs/pull/45 is accepted upstream
+                let body = serde_xml_rs::from_str::<String>(body)
+                    .map_err(|e| ApiError(format!("Response body did not match the schema: {}", e)))?;
                 Ok(GetResponse::OK
                     (body)
                 )
@@ -549,7 +552,10 @@ impl<S, C> Api<C> for Client<S, C> where
                         .map_err(|e| ApiError(format!("Failed to read response: {}", e))).await?;
                 let body = str::from_utf8(&body)
                     .map_err(|e| ApiError(format!("Response was not valid UTF8: {}", e)))?;
-                let body = body.to_string();
+                // ToDo: this will move to swagger-rs and become a standard From conversion trait
+                // once https://github.com/RReverser/serde-xml-rs/pull/45 is accepted upstream
+                let body = serde_xml_rs::from_str::<String>(body)
+                    .map_err(|e| ApiError(format!("Response body did not match the schema: {}", e)))?;
                 Ok(GetMultiResponse::OK
                     (body)
                 )

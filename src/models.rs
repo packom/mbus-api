@@ -49,6 +49,14 @@ impl std::ops::DerefMut for Address {
 }
 
 
+impl Address {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// Baudrate to use for the communication - valid values 300, 600, 1200, 2400, 4800, 9600
 /// Enumeration of values.
@@ -102,6 +110,14 @@ impl std::str::FromStr for Baudrate {
     }
 }
 
+impl Baudrate {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// The device the M-Bus is connected to - /dev/ is prepended to {device} by M-Bus HTTPD
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -147,6 +163,14 @@ impl std::ops::DerefMut for Device {
 }
 
 
+impl Device {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// Raspberry Pi Hat Information
 // Methods for converting between header::IntoHeaderValue<Hat> and hyper::header::HeaderValue
@@ -326,6 +350,14 @@ impl std::str::FromStr for Hat {
 }
 
 
+impl Hat {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// Max frames to listen for
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -359,6 +391,14 @@ impl std::ops::DerefMut for Maxframes {
 }
 
 
+impl Maxframes {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// M-Bus device data as an XML document
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -404,6 +444,14 @@ impl std::ops::DerefMut for MbusData {
 }
 
 
+impl MbusData {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// Output of libmbus scan command
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -449,6 +497,14 @@ impl std::ops::DerefMut for Slaves {
 }
 
 
+impl Slaves {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// Some error text
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -494,6 +550,14 @@ impl std::ops::DerefMut for TextError {
 }
 
 
+impl TextError {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
 
 /// A YAML file
 #[derive(Debug, Clone, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
@@ -539,3 +603,11 @@ impl std::ops::DerefMut for Yaml {
 }
 
 
+impl Yaml {
+    /// Helper function to allow us to convert this model to an XML string.
+    /// Will panic if serialisation fails.
+    #[allow(dead_code)]
+    pub(crate) fn to_xml(&self) -> String {
+        serde_xml_rs::to_string(&self).expect("impossible to fail to serialize")
+    }
+}
